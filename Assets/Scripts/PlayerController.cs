@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEditor.Rendering.LookDev;
 using UnityEngine;
 using UnityEngine.Rendering;
-
+namespace UnityStandartAssets.PlayerController { }
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-
+    
     private PlayerInputActions _playerInputActions;
     private Vector2 _moveInput;
     private CharacterController _characterController;
@@ -23,6 +23,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _staminaRunDrainPerSecond = 1f;
     [SerializeField] private float _staminaJumpDrainPerSecond = 2f;
     [SerializeField] private float _staminaRegenPerSecond = 1f;
+    public float CurrentStamina => _stamina;
+    public float MaxStamina => _maxStamina;
     private bool _isRunning;
 
     private void Awake()
