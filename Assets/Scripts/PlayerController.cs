@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEditor.Rendering.LookDev;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -7,18 +8,20 @@ namespace UnityStandartAssets.PlayerController { }
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-    
+
     private PlayerInputActions _playerInputActions;
     private Vector2 _moveInput;
     private CharacterController _characterController;
     private float _verticalVelocity;
-    
+    private bool isClimbing = false;
+
     [SerializeField] private Vector3 _movementDirection;
     [SerializeField] private float _walkSpeed = 5f;
     [SerializeField] private float _runSpeed = 10f;
     [SerializeField] private float _jumpForce = 5f;
-    [SerializeField] private float _stamina;
+    [SerializeField] private float _climbSpeed = 5f;
 
+    [SerializeField] private float _stamina;
     [SerializeField] private float _maxStamina = 10f;
     [SerializeField] private float _staminaRunDrainPerSecond = 1f;
     [SerializeField] private float _staminaJumpDrainPerSecond = 2f;
@@ -47,6 +50,12 @@ public class PlayerController : MonoBehaviour
     }
     private void JumpHandler()
     {
+        if (isClimbing)
+        {
+            isClimbing = false;
+            Vector3 _jumpDirection = -transform.forward + Vector3.up * 0.3f;
+            _characterController.Move(_jumpDirection.normalized * Time.deltaTime);
+        }
         if (_characterController.isGrounded && _stamina > _staminaJumpDrainPerSecond)
         {
             _verticalVelocity = _jumpForce;
@@ -62,12 +71,47 @@ public class PlayerController : MonoBehaviour
     {
         _characterController = GetComponent<CharacterController>();
         Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false; 
+        Cursor.visible = false;
     }
 
     private void Update()
     {
-
+        if (isClimbing)
+        {
+            HandleClimbing();
+        }
+        else
+        {
+            HandleMovement();
+        }
+        
+        
+    }
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Ladder"))
+        {
+            isClimbing = true;
+        }
+    }
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Ladder"))
+        {
+            isClimbing = false;
+        }
+    }
+    private void regenerationStamina()
+    {
+        if (_stamina < _maxStamina)
+        {
+            
+            _stamina += _staminaRegenPerSecond * Time.deltaTime;
+            if (_stamina > _maxStamina) _stamina = _maxStamina;
+        }
+    }
+    private void HandleMovement()
+    {
         Vector3 move = transform.forward * _moveInput.y + transform.right * _moveInput.x;
 
         float currentSpeed = _walkSpeed;
@@ -79,16 +123,12 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            if (_stamina < _maxStamina)
-            {
-                currentSpeed = _walkSpeed;
-                _stamina += _staminaRegenPerSecond * Time.deltaTime;
-                if(_stamina > _maxStamina) _stamina = _maxStamina;
-            }
+            regenerationStamina();
+            currentSpeed = _walkSpeed;
         }
         if (_characterController.isGrounded)
         {
-            if(_verticalVelocity<0) _verticalVelocity = -1f;
+            if (_verticalVelocity < 0) _verticalVelocity = -1f;
         }
         else
         {
@@ -96,5 +136,16 @@ public class PlayerController : MonoBehaviour
         }
         move.y = _verticalVelocity;
         _characterController.Move(move * currentSpeed * Time.deltaTime);
+
+    }
+    private void HandleClimbing()
+    {
+        float vertical = _moveInput.y;
+        Vector3 climb = transform.up * vertical * _climbSpeed * Time.deltaTime;
+        _characterController.Move(climb);
+        regenerationStamina();
+        if (Mathf.Abs(vertical) < 0.01f)
+            return;
+        _verticalVelocity = 0f;
     }
 }
